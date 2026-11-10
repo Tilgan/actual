@@ -268,7 +268,7 @@ function handleBudgetChange(budget) {
       .get()
       .set(
         `${sheetName}!carryover-${budget.category}`,
-        budget.carryover === 1 ? true : false,
+        budget.carryover === 1 ? true : true,
       );
     sheet.get().set(`${sheetName}!goal-${budget.category}`, budget.goal);
     sheet
