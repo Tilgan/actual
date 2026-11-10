@@ -16,7 +16,7 @@ function getBlankSheet(months) {
 export function createBlankCategory(cat, months) {
   if (months.length > 0) {
     const sheetName = getBlankSheet(months);
-    sheet.get().createStatic(sheetName, `carryover-${cat.id}`, false);
+    sheet.get().createStatic(sheetName, `carryover-${cat.id}`, true);
     sheet.get().createStatic(sheetName, `leftover-${cat.id}`, 0);
     sheet.get().createStatic(sheetName, `leftover-pos-${cat.id}`, 0);
   }
@@ -43,7 +43,7 @@ export function createCategory(cat, sheetName, prevSheetName) {
       sheet.get().set(resolveName(sheetName, `budget-${cat.id}`), 0);
     }
 
-    sheet.get().createStatic(sheetName, `carryover-${cat.id}`, false);
+    sheet.get().createStatic(sheetName, `carryover-${cat.id}`, true);
 
     sheet.get().createDynamic(sheetName, `leftover-${cat.id}`, {
       initialValue: 0,
