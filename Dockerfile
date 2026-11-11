@@ -16,6 +16,13 @@ COPY yarn.lock package.json .yarnrc.yml tsconfig*.json lage.config.js ./
 COPY bin ./bin
 COPY packages ./packages
 
+# Initialize a local Git repository with a HEAD commit so lage (`git ls-tree HEAD -r`) succeeds
+RUN git init && \
+    git config user.email "build@local" && \
+    git config user.name "build" && \
+    git add -A && \
+    git commit -q -m "docker-build"
+
 # Point /usr/local/bin/yarn to the repo's vendored Yarn 4 release
 RUN ln -sf /app/.yarn/releases/yarn-*.cjs /usr/local/bin/yarn
 
@@ -28,9 +35,12 @@ RUN yarn config set taskPoolConcurrency 2 && \
     yarn config set httpTimeout 300000 && \
     yarn config set httpRetry 5
 
-# Install dependencies and compile the browser UI + sync-server
+# Install dependencies in a separate layer so Docker caches them
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-RUN yarn install && yarn build:browser && yarn build:server
+RUN yarn install
+
+# Compile the browser UI and sync-server
+RUN yarn build:browser && yarn build:server
 
 # Focus the workspaces in production mode
 RUN yarn workspaces focus @actual-app/sync-server --production
