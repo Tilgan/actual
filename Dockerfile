@@ -16,6 +16,13 @@ RUN ln -s /app/.yarn/releases/yarn-*.cjs /usr/local/bin/yarn
 # Avoiding memory issues with ARMv7
 RUN if [ "$(uname -m)" = "armv7l" ]; then yarn config set taskPoolConcurrency 2; yarn config set networkConcurrency 5; fi
 
+# Avoiding memory issues with ARMv7
+RUN if [ "$(uname -m)" = "armv7l" ]; then yarn config set taskPoolConcurrency 2; yarn config set networkConcurrency 5; fi
+
+# ---> ADD THESE TWO LINES <---
+RUN yarn workspaces focus @actual-app/sync-server
+RUN yarn workspace @actual-app/sync-server build
+
 # Focus the workspaces in production mode
 RUN yarn workspaces focus @actual-app/sync-server --production
 
