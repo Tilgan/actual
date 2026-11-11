@@ -39,8 +39,13 @@ RUN yarn config set taskPoolConcurrency 2 && \
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN yarn install
 
-# Compile the browser UI and sync-server
-RUN yarn build:browser && yarn build:server
+# Ignore node_modules and cloned locale folders so lage's git hash-object succeeds, then compile
+RUN ln -sf /bin/bash /bin/sh && \
+    printf "node_modules/\n**/node_modules/\npackages/desktop-client/locale/\n.yarn/\n" > .gitignore && \
+    git add .gitignore && \
+    git commit -q -m "ignore node_modules for lage" && \
+    yarn build:browser && \
+    yarn build:server
 
 # Focus the workspaces in production mode
 RUN yarn workspaces focus @actual-app/sync-server --production
