@@ -1,23 +1,29 @@
 FROM alpine:3.23 AS builder
 
-# Install required packages
-RUN apk add --no-cache nodejs python3 openssl build-base
+# Install required packages (added bash and git for Actual's build scripts)
+RUN apk add --no-cache nodejs python3 openssl build-base bash git
 
 WORKDIR /app
 
 COPY .yarn ./.yarn
-# 1. Added tsconfig*.json and lage.config.js so the build scripts can run
 COPY yarn.lock package.json .yarnrc.yml tsconfig*.json lage.config.js ./
+COPY bin ./bin
 COPY packages ./packages
 
 # Alpine's Node.js package does not include Corepack, so expose the vendored
 # Yarn release on PATH.
 RUN ln -s /app/.yarn/releases/yarn-*.cjs /usr/local/bin/yarn
 
-# Avoiding memory issues with ARMv7
-RUN if [ "$(uname -m)" = "armv7l" ]; then yarn config set taskPoolConcurrency 2; yarn config set networkConcurrency 5; fi
+# Prevent Yarn 4.13.0 network timeouts and the 'onCancel' retry crash on Node 24
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV HUSKY=0
+RUN yarn config set taskPoolConcurrency 2 && \
+    yarn config set networkConcurrency 5 && \
+    yarn config set httpTimeout 300000 && \
+    yarn config set httpRetry 0
 
-# 2. Added: Install all dependencies and compile the browser UI + sync-server
+# Install dependencies and compile the browser UI + sync-server
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN yarn install && yarn build:browser && yarn build:server
 
@@ -60,7 +66,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/sync-server/package.json ./
 COPY --from=builder /app/packages/sync-server/build ./
 
-# 3. Added: Ensure the compiled React frontend is present in @actual-app/web/build
+# Ensure the compiled React frontend is present in @actual-app/web/build
 COPY --from=builder /app/packages/desktop-client/package.json ./node_modules/@actual-app/web/package.json
 COPY --from=builder /app/packages/desktop-client/build ./node_modules/@actual-app/web/build
 
