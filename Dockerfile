@@ -1,7 +1,7 @@
-FROM alpine:3.23 AS builder
+FROM node:22-alpine AS builder
 
-# Install required packages (added bash and git for Actual's build scripts)
-RUN apk add --no-cache nodejs python3 openssl build-base bash git
+# Install required build packages
+RUN apk add --no-cache python3 openssl build-base bash git
 
 WORKDIR /app
 
@@ -10,18 +10,17 @@ COPY yarn.lock package.json .yarnrc.yml tsconfig*.json lage.config.js ./
 COPY bin ./bin
 COPY packages ./packages
 
-# Alpine's Node.js package does not include Corepack, so expose the vendored
-# Yarn release on PATH.
-RUN ln -s /app/.yarn/releases/yarn-*.cjs /usr/local/bin/yarn
+# Point /usr/local/bin/yarn to the repo's vendored Yarn 4 release
+RUN ln -sf /app/.yarn/releases/yarn-*.cjs /usr/local/bin/yarn
 
-# Prevent Yarn 4.13.0 network timeouts and the 'onCancel' retry crash on Node 24
+# Configure Yarn concurrency and retries for Cloud Shell
 ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV HUSKY=0
 RUN yarn config set taskPoolConcurrency 2 && \
     yarn config set networkConcurrency 5 && \
     yarn config set httpTimeout 300000 && \
-    yarn config set httpRetry 0
+    yarn config set httpRetry 5
 
 # Install dependencies and compile the browser UI + sync-server
 ENV NODE_OPTIONS="--max-old-space-size=4096"
@@ -46,10 +45,10 @@ RUN find node_modules/@actual-app -maxdepth 2 -type d \
     \( -name src -o -name e2e -o -name __tests__ -o -name __mocks__ -o -name tests -o -name test -o -name build-stats \) \
     -exec rm -rf {} +
 
-FROM alpine:3.23 AS prod
+FROM node:22-alpine AS prod
 
 # Minimal runtime dependencies
-RUN apk add --no-cache nodejs tini
+RUN apk add --no-cache tini
 
 # Create a non-root user
 ARG USERNAME=actual
