@@ -6,7 +6,7 @@ RUN apk add --no-cache nodejs python3 openssl build-base
 WORKDIR /app
 
 COPY .yarn ./.yarn
-COPY yarn.lock package.json .yarnrc.yml ./
+COPY yarn.lock package.json .yarnrc.yml tsconfig.json ./
 COPY packages ./packages
 
 # Alpine's Node.js package does not include Corepack, so expose the vendored
