@@ -33,7 +33,7 @@ import { useSheetValue } from '#hooks/useSheetValue';
 import { useUndo } from '#hooks/useUndo';
 import type { Binding, SheetFields } from '#spreadsheet';
 import { trackingBudget } from '#spreadsheet/bindings';
-import type { CategoryGroupMonthProps, CategoryMonthProps } from '../../../..';
+import type { CategoryGroupMonthProps, CategoryMonthProps } from 'packages/desktop-client';
 
 import { BalanceMenu } from './BalanceMenu';
 import { BudgetMenu } from './BudgetMenu';
