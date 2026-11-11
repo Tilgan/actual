@@ -20,8 +20,8 @@ RUN if [ "$(uname -m)" = "armv7l" ]; then yarn config set taskPoolConcurrency 2;
 RUN if [ "$(uname -m)" = "armv7l" ]; then yarn config set taskPoolConcurrency 2; yarn config set networkConcurrency 5; fi
 
 # ---> ADD THESE TWO LINES <---
-RUN yarn workspaces focus @actual-app/sync-server @actual-app/desktop-client
-RUN yarn workspace @actual-app/desktop-client build
+RUN yarn workspaces focus @actual-app/sync-server @actual-app/web
+RUN yarn workspace @actual-app/web build
 RUN yarn workspace @actual-app/sync-server build
 
 # Focus the workspaces in production mode
