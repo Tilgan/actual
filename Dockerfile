@@ -6,7 +6,8 @@ RUN apk add --no-cache nodejs python3 openssl build-base
 WORKDIR /app
 
 COPY .yarn ./.yarn
-COPY yarn.lock package.json .yarnrc.yml ./
+# 1. Added tsconfig*.json and lage.config.js so the build scripts can run
+COPY yarn.lock package.json .yarnrc.yml tsconfig*.json lage.config.js ./
 COPY packages ./packages
 
 # Alpine's Node.js package does not include Corepack, so expose the vendored
@@ -15,6 +16,10 @@ RUN ln -s /app/.yarn/releases/yarn-*.cjs /usr/local/bin/yarn
 
 # Avoiding memory issues with ARMv7
 RUN if [ "$(uname -m)" = "armv7l" ]; then yarn config set taskPoolConcurrency 2; yarn config set networkConcurrency 5; fi
+
+# 2. Added: Install all dependencies and compile the browser UI + sync-server
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN yarn install && yarn build:browser && yarn build:server
 
 # Focus the workspaces in production mode
 RUN yarn workspaces focus @actual-app/sync-server --production
@@ -54,6 +59,10 @@ ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/sync-server/package.json ./
 COPY --from=builder /app/packages/sync-server/build ./
+
+# 3. Added: Ensure the compiled React frontend is present in @actual-app/web/build
+COPY --from=builder /app/packages/desktop-client/package.json ./node_modules/@actual-app/web/package.json
+COPY --from=builder /app/packages/desktop-client/build ./node_modules/@actual-app/web/build
 
 # script dir changed when we swapped build method, add the legacy dir in for compatibility
 RUN mkdir -p src && ln -s ../scripts src/scripts
