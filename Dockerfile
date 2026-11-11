@@ -20,7 +20,8 @@ RUN if [ "$(uname -m)" = "armv7l" ]; then yarn config set taskPoolConcurrency 2;
 RUN if [ "$(uname -m)" = "armv7l" ]; then yarn config set taskPoolConcurrency 2; yarn config set networkConcurrency 5; fi
 
 # ---> ADD THESE TWO LINES <---
-RUN yarn workspaces focus @actual-app/sync-server
+RUN yarn workspaces focus @actual-app/sync-server @actual-app/desktop-client
+RUN yarn workspace @actual-app/desktop-client build
 RUN yarn workspace @actual-app/sync-server build
 
 # Focus the workspaces in production mode
@@ -61,6 +62,8 @@ ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/sync-server/package.json ./
 COPY --from=builder /app/packages/sync-server/build ./
+COPY --from=builder /app/packages/desktop-client/build ./client-build
+ENV ACTUAL_WEB_ROOT=/app/client-build
 
 # script dir changed when we swapped build method, add the legacy dir in for compatibility
 RUN mkdir -p src && ln -s ../scripts src/scripts
