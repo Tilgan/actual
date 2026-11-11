@@ -1,7 +1,13 @@
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 
-# Install required build packages
-RUN apk add --no-cache python3 openssl build-base bash git
+# Install required build packages on Debian
+RUN apt-get update && apt-get install -y \
+    python3 \
+    openssl \
+    build-essential \
+    bash \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -29,12 +35,6 @@ RUN yarn install && yarn build:browser && yarn build:server
 # Focus the workspaces in production mode
 RUN yarn workspaces focus @actual-app/sync-server --production
 
-# better-sqlite3 only ships prebuilt binaries for x64 and arm64, so compile it
-# on any other architecture (armv6/armv7 images).
-RUN if [ "$(node node_modules/better-sqlite3/lib/binding.js)" = "0" ]; then \
-      cd node_modules/better-sqlite3 && node ../node-gyp/bin/node-gyp.js rebuild --release; \
-    fi
-
 # Dereference yarn's workspace:* symlinks so the prod stage can copy just node_modules.
 RUN cp -RL node_modules node_modules.real \
     && rm -rf node_modules \
@@ -45,17 +45,13 @@ RUN find node_modules/@actual-app -maxdepth 2 -type d \
     \( -name src -o -name e2e -o -name __tests__ -o -name __mocks__ -o -name tests -o -name test -o -name build-stats \) \
     -exec rm -rf {} +
 
-FROM node:22-alpine AS prod
+FROM node:22-bookworm-slim AS prod
 
 # Minimal runtime dependencies
-RUN apk add --no-cache tini
+RUN apt-get update && apt-get install -y tini openssl && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-ARG USERNAME=actual
-ARG USER_UID=1001
-ARG USER_GID=$USER_UID
-RUN addgroup -S ${USERNAME} -g ${USER_GID} && adduser -S ${USERNAME} -G ${USERNAME} -u ${USER_UID}
-RUN mkdir /data && chown -R ${USERNAME}:${USERNAME} /data
+# Ensure /data directory exists and is owned by the non-root node user
+RUN mkdir -p /data && chown -R node:node /data
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -72,6 +68,6 @@ COPY --from=builder /app/packages/desktop-client/build ./node_modules/@actual-ap
 # script dir changed when we swapped build method, add the legacy dir in for compatibility
 RUN mkdir -p src && ln -s ../scripts src/scripts
 
-ENTRYPOINT ["/sbin/tini","-g",  "--"]
+ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 EXPOSE 5006
 CMD ["node", "app.js"]
